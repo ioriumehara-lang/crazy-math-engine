@@ -2,21 +2,24 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Sequential Logic Engine v4.6</title>
+    <title>Sequential Logic Engine v4.7</title>
     <style>
         :root {
-            --bg: #0a0b10;
-            --panel: #161b22;
+            --bg: #05070a;
+            --panel: rgba(22, 27, 34, 0.8);
             --neon-asc: #00ff95;
             --neon-desc: #00d4ff;
-            --text-main: #e6edf3;
-            --accent: #f0f6fc;
+            --accent: #ffffff;
+            --border: rgba(255, 255, 255, 0.1);
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
             background-color: var(--bg);
-            color: var(--text-main);
+            background-image: 
+                radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+            color: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,156 +27,192 @@
             margin: 0;
         }
 
-        .container {
+        .terminal-container {
             width: 90%;
-            max-width: 850px;
+            max-width: 900px;
             background: var(--panel);
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 50px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
             position: relative;
+            overflow: hidden;
+        }
+
+        /* スキャンライン演出 */
+        .terminal-container::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: rgba(0, 212, 255, 0.1);
+            animation: scan 4s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
         }
 
         h1 {
             text-align: center;
-            font-weight: 300;
-            letter-spacing: 5px;
-            margin-bottom: 40px;
+            font-weight: 200;
+            letter-spacing: 12px;
+            margin-bottom: 50px;
             color: var(--accent);
             text-transform: uppercase;
+            font-size: 1.5rem;
+            opacity: 0.9;
         }
 
-        .search-section {
+        .input-group {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin-bottom: 50px;
+            position: relative;
+            margin-bottom: 60px;
         }
 
         input {
-            background: rgba(0,0,0,0.3);
-            border: 2px solid #30363d;
-            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 100px;
             color: #fff;
-            padding: 15px;
-            font-size: 1.5rem;
-            width: 280px;
+            padding: 15px 40px;
+            font-size: 2rem;
+            width: 240px;
             text-align: center;
             outline: none;
+            transition: 0.4s;
+            font-weight: 200;
+        }
+
+        input:focus {
+            border-color: var(--neon-desc);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
         }
 
         button {
-            background: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 12px;
-            padding: 0 35px;
-            font-size: 1rem;
-            font-weight: bold;
+            position: absolute;
+            right: calc(50% - 200px);
+            background: none;
+            border: 1px solid var(--neon-asc);
+            color: var(--neon-asc);
+            border-radius: 100px;
+            width: 50px; height: 50px;
             cursor: pointer;
-            transition: 0.2s;
-        }
-
-        button:hover { background: #fff; transform: translateY(-2px); }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-        }
-
-        .res-card {
-            background: rgba(0,0,0,0.2);
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 25px;
-            min-height: 160px;
+            font-size: 1.2rem;
+            transition: 0.3s;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
         }
 
-        .label {
-            font-size: 0.7rem;
-            font-weight: bold;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            text-transform: uppercase;
+        button:hover {
+            background: var(--neon-asc);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-asc);
         }
 
-        .formula {
-            font-size: 1.3rem;
-            font-family: 'Consolas', monospace;
-            color: var(--accent);
+        .results-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .data-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
             text-align: center;
-            word-break: break-all;
-            line-height: 1.6;
+            transition: 0.3s;
         }
 
-        sup { color: #ffca28; font-weight: bold; }
-        #status-bar { position: absolute; bottom: 20px; width: 100%; left: 0; text-align: center; font-size: 0.7rem; color: #8b949e; }
+        .data-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateY(-5px);
+        }
+
+        .card-label {
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            opacity: 0.5;
+        }
+
+        .formula-output {
+            font-size: 1.4rem;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            color: #fff;
+            min-height: 1.5em;
+            word-break: break-all;
+        }
+
+        sup { color: var(--neon-desc); font-weight: bold; }
+
+        #status-display {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.7rem;
+            font-family: monospace;
+            color: var(--text-dim);
+            opacity: 0.4;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Logic Engine v4.6</h1>
+<div class="terminal-container">
+    <h1>Sequential Core</h1>
     
-    <div class="search-section">
-        <input type="number" id="target" value="201186" autofocus>
-        <button onclick="solve()">SOLVE</button>
+    <div class="input-group">
+        <input type="number" id="target" value="201186" autocomplete="off">
+        <button onclick="solve()">&rarr;</button>
     </div>
 
-    <div class="results-grid">
-        <div class="res-card">
-            <div class="label" style="color: var(--neon-asc)">Ascending 1 &rarr; 9</div>
-            <div id="asc-out" class="formula">--</div>
+    <div class="results-wrapper">
+        <div class="data-card">
+            <div class="card-label" style="color: var(--neon-asc)">Sequence [1-9]</div>
+            <div id="asc-out" class="formula-output">--</div>
         </div>
-        <div class="res-card">
-            <div class="label" style="color: var(--neon-desc)">Descending 9 &rarr; 1</div>
-            <div id="desc-out" class="formula">--</div>
+        <div class="data-card">
+            <div class="card-label" style="color: var(--neon-desc)">Sequence [9-1]</div>
+            <div id="desc-out" class="formula-output">--</div>
         </div>
     </div>
 
-    <div id="status-bar">READY // ULTRA POWER SEARCH MODE</div>
+    <div id="status-display">LOG: SYSTEM_IDLE // THREADS_READY</div>
 </div>
 
 <script>
 const memo = new Map();
 
-function getPowerPatterns(numbers) {
+function compute(numbers) {
     const key = numbers.join(',');
     if (memo.has(key)) return memo.get(key);
 
     let res = new Map();
-    const combined = parseInt(numbers.join(''));
-    if (!isNaN(combined)) {
-        res.set(combined, numbers.join(''));
-    }
+    res.set(parseInt(numbers.join('')), numbers.join(''));
 
     for (let i = 1; i < numbers.length; i++) {
-        const lefts = getPowerPatterns(numbers.slice(0, i));
-        const rights = getPowerPatterns(numbers.slice(i));
+        const lefts = compute(numbers.slice(0, i));
+        const rights = compute(numbers.slice(i));
 
         for (const [lv, le] of lefts) {
             for (const [rv, re] of rights) {
-                // 四則演算
                 update(res, lv + rv, `(${le}+${re})`);
                 update(res, lv - rv, `(${le}-${re})`);
                 update(res, lv * rv, `(${le}*${re})`);
                 if (rv !== 0 && lv % rv === 0) update(res, lv / rv, `(${le}/${re})`);
 
-                // 累乗ブースト：底と指数のバランスを最適化
-                // 201186などの巨大数に対応するため、計算範囲を調整
                 if (rv >= 2 && rv <= 15) {
                     if ((lv >= 2 && lv <= 100) || (lv > 100 && rv <= 3)) {
-                        try {
-                            const pv = Math.pow(lv, rv);
-                            if (Number.isSafeInteger(pv) && pv > 0 && pv < 50000000) {
-                                update(res, pv, `(${le}^${re})`);
-                            }
-                        } catch(e) {}
+                        const pv = Math.pow(lv, rv);
+                        if (Number.isSafeInteger(pv) && pv > 0 && pv < 50000000) {
+                            update(res, pv, `(${le}^${re})`);
+                        }
                     }
                 }
             }
@@ -184,36 +223,31 @@ function getPowerPatterns(numbers) {
 }
 
 function update(map, val, expr) {
-    if (!map.has(val) || expr.length < map.get(val).length) {
-        map.set(val, expr);
-    }
+    if (!map.has(val) || expr.length < map.get(val).length) map.set(val, expr);
 }
 
 function solve() {
     const val = parseInt(document.getElementById('target').value);
-    const status = document.getElementById('status-bar');
+    const log = document.getElementById('status-display');
     if (isNaN(val)) return;
 
-    status.innerText = "SCANNING POWER RADIX PATTERNS...";
+    log.innerText = "LOG: EXECUTING_RECURSIVE_DESCENT_SEARCH...";
     memo.clear(); 
 
     setTimeout(() => {
-        const ascMap = getPowerPatterns([1,2,3,4,5,6,7,8,9]);
-        const descMap = getPowerPatterns([9,8,7,6,5,4,3,2,1]);
+        const asc = compute([1,2,3,4,5,6,7,8,9]).get(val);
+        const desc = compute([9,8,7,6,5,4,3,2,1]).get(val);
 
-        document.getElementById('asc-out').innerHTML = format(ascMap.get(val));
-        document.getElementById('desc-out').innerHTML = format(descMap.get(val));
-        status.innerText = "CALCULATION COMPLETE.";
+        document.getElementById('asc-out').innerHTML = format(asc);
+        document.getElementById('desc-out').innerHTML = format(desc);
+        log.innerText = "LOG: SEARCH_COMPLETE // RESULTS_RENDERED";
     }, 50);
 }
 
 function format(str) {
-    if (!str) return '<span style="color:#444">NOT REACHABLE</span>';
-    let s = str;
-    if (s.startsWith('(') && s.endsWith(')')) s = s.substring(1, s.length - 1);
-    // 累乗の表示を綺麗にする
-    return s.replace(/\^(\d+)/g, '<sup>$1</sup>')
-            .replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
+    if (!str) return '<span style="opacity:0.2">NULL</span>';
+    let s = str.startsWith('(') && str.endsWith(')') ? str.slice(1, -1) : str;
+    return s.replace(/\^(\d+)/g, '<sup>$1</sup>').replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
 }
 
 document.getElementById('target').addEventListener('keypress', (e) => {
