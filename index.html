@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Sequential Logic Engine Pro</title>
+    <title>Sequential Logic Engine v4.6</title>
     <style>
         :root {
             --bg: #0a0b10;
@@ -10,7 +10,6 @@
             --neon-asc: #00ff95;
             --neon-desc: #00d4ff;
             --text-main: #e6edf3;
-            --text-dim: #8b949e;
             --accent: #f0f6fc;
         }
 
@@ -41,6 +40,7 @@
             letter-spacing: 5px;
             margin-bottom: 40px;
             color: var(--accent);
+            text-transform: uppercase;
         }
 
         .search-section {
@@ -57,7 +57,7 @@
             color: #fff;
             padding: 15px;
             font-size: 1.5rem;
-            width: 250px;
+            width: 280px;
             text-align: center;
             outline: none;
         }
@@ -71,7 +71,10 @@
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
+            transition: 0.2s;
         }
+
+        button:hover { background: #fff; transform: translateY(-2px); }
 
         .results-grid {
             display: grid;
@@ -84,7 +87,7 @@
             border: 1px solid #30363d;
             border-radius: 12px;
             padding: 25px;
-            min-height: 140px;
+            min-height: 160px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -96,80 +99,81 @@
             font-weight: bold;
             letter-spacing: 2px;
             margin-bottom: 15px;
+            text-transform: uppercase;
         }
 
         .formula {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-family: 'Consolas', monospace;
             color: var(--accent);
             text-align: center;
             word-break: break-all;
+            line-height: 1.6;
         }
 
-        #status-bar {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            font-size: 0.7rem;
-            color: var(--text-dim);
-        }
-
-        sup { color: #ffca28; }
+        sup { color: #ffca28; font-weight: bold; }
+        #status-bar { position: absolute; bottom: 20px; width: 100%; left: 0; text-align: center; font-size: 0.7rem; color: #8b949e; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Sequential Logic Pro</h1>
+    <h1>Logic Engine v4.6</h1>
     
     <div class="search-section">
-        <input type="number" id="target" placeholder="Target Number" autofocus>
-        <button onclick="solve()">EXECUTE</button>
+        <input type="number" id="target" value="201186" autofocus>
+        <button onclick="solve()">SOLVE</button>
     </div>
 
     <div class="results-grid">
         <div class="res-card">
-            <div class="label" style="color: var(--neon-asc)">ASCENDING 1 &rarr; 9</div>
+            <div class="label" style="color: var(--neon-asc)">Ascending 1 &rarr; 9</div>
             <div id="asc-out" class="formula">--</div>
         </div>
         <div class="res-card">
-            <div class="label" style="color: var(--neon-desc)">DESCENDING 9 &rarr; 1</div>
+            <div class="label" style="color: var(--neon-desc)">Descending 9 &rarr; 1</div>
             <div id="desc-out" class="formula">--</div>
         </div>
     </div>
 
-    <div id="status-bar">READY // HIGH PERFORMANCE MODE</div>
+    <div id="status-bar">READY // ULTRA POWER SEARCH MODE</div>
 </div>
 
 <script>
 const memo = new Map();
 
-function getDeepPatterns(numbers) {
+function getPowerPatterns(numbers) {
     const key = numbers.join(',');
     if (memo.has(key)) return memo.get(key);
 
     let res = new Map();
-    res.set(parseInt(numbers.join('')), numbers.join(''));
+    const combined = parseInt(numbers.join(''));
+    if (!isNaN(combined)) {
+        res.set(combined, numbers.join(''));
+    }
 
     for (let i = 1; i < numbers.length; i++) {
-        const lefts = getDeepPatterns(numbers.slice(0, i));
-        const rights = getDeepPatterns(numbers.slice(i));
+        const lefts = getPowerPatterns(numbers.slice(0, i));
+        const rights = getPowerPatterns(numbers.slice(i));
 
-        for (let [lv, le] of lefts) {
-            for (let [rv, re] of rights) {
+        for (const [lv, le] of lefts) {
+            for (const [rv, re] of rights) {
                 // 四則演算
                 update(res, lv + rv, `(${le}+${re})`);
                 update(res, lv - rv, `(${le}-${re})`);
                 update(res, lv * rv, `(${le}*${re})`);
                 if (rv !== 0 && lv % rv === 0) update(res, lv / rv, `(${le}/${re})`);
 
-                // 累乗ブースト（大きな数字を作るのに必須）
-                if (rv >= 2 && rv <= 10 && lv >= 2 && lv <= 100) {
-                    const pv = Math.pow(lv, rv);
-                    if (Number.isSafeInteger(pv) && pv < 10000000) {
-                        update(res, pv, `(${le}^${re})`);
+                // 累乗ブースト：底と指数のバランスを最適化
+                // 201186などの巨大数に対応するため、計算範囲を調整
+                if (rv >= 2 && rv <= 15) {
+                    if ((lv >= 2 && lv <= 100) || (lv > 100 && rv <= 3)) {
+                        try {
+                            const pv = Math.pow(lv, rv);
+                            if (Number.isSafeInteger(pv) && pv > 0 && pv < 50000000) {
+                                update(res, pv, `(${le}^${re})`);
+                            }
+                        } catch(e) {}
                     }
                 }
             }
@@ -190,23 +194,26 @@ function solve() {
     const status = document.getElementById('status-bar');
     if (isNaN(val)) return;
 
-    status.innerText = "PROCESSING COMPLEX COMBINATIONS...";
-    
+    status.innerText = "SCANNING POWER RADIX PATTERNS...";
+    memo.clear(); 
+
     setTimeout(() => {
-        const ascMap = getDeepPatterns([1,2,3,4,5,6,7,8,9]);
-        const descMap = getDeepPatterns([9,8,7,6,5,4,3,2,1]);
+        const ascMap = getPowerPatterns([1,2,3,4,5,6,7,8,9]);
+        const descMap = getPowerPatterns([9,8,7,6,5,4,3,2,1]);
 
         document.getElementById('asc-out').innerHTML = format(ascMap.get(val));
         document.getElementById('desc-out').innerHTML = format(descMap.get(val));
-        status.innerText = "COMPLETE.";
+        status.innerText = "CALCULATION COMPLETE.";
     }, 50);
 }
 
 function format(str) {
-    if (!str) return '<span style="color:#444">NOT FOUND</span>';
+    if (!str) return '<span style="color:#444">NOT REACHABLE</span>';
     let s = str;
     if (s.startsWith('(') && s.endsWith(')')) s = s.substring(1, s.length - 1);
-    return s.replace(/\^(\d+)/g, '<sup>$1</sup>').replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
+    // 累乗の表示を綺麗にする
+    return s.replace(/\^(\d+)/g, '<sup>$1</sup>')
+            .replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
 }
 
 document.getElementById('target').addEventListener('keypress', (e) => {
