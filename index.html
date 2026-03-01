@@ -2,37 +2,65 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Sequential Math Generator</title>
+    <title>Math Puzzle: discovery & Missing</title>
     <style>
-        body { font-family: 'Consolas', monospace; background: #0d0d0d; color: #00ff41; padding: 20px; line-height: 1.6; }
-        .header { border-bottom: 2px solid #00ff41; margin-bottom: 20px; padding-bottom: 10px; }
-        .controls { margin-bottom: 20px; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        :root { --neon-green: #00ff41; --bg-black: #0d0d0d; --panel-bg: #1a1a1a; }
+        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* ヘッダー */
+        .header { padding: 20px; border-bottom: 2px solid var(--neon-green); background: var(--bg-black); }
+        .controls { margin-top: 10px; }
+        button { background: var(--neon-green); color: #000; border: none; padding: 10px 25px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button:disabled { background: #004411; color: #008822; }
-        #log-container { display: flex; flex-direction: column-reverse; /* 新しい結果を上に */ }
-        .row { border-bottom: 1px solid #1a1a1a; padding: 5px 0; display: flex; justify-content: space-between; }
-        .num { font-weight: bold; color: #fff; width: 80px; }
-        .formula { color: #00ff41; flex-grow: 1; text-align: left; padding-left: 20px; }
-        .stats { font-size: 0.8rem; color: #888; margin-top: 10px; }
+
+        /* メインコンテンツ（左右分割） */
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* 左側：見つかった数式 */
+        .column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; }
+        .column-header { padding: 10px; background: var(--panel-bg); font-weight: bold; text-align: center; border-bottom: 1px solid #333; }
+        #found-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column-reverse; }
+
+        /* 右側：ないものリスト */
+        .missing-column { width: 300px; display: flex; flex-direction: column; background: #050505; }
+        #missing-list { flex: 1; overflow-y: auto; padding: 10px; color: #ff4444; }
+
+        /* 行のデザイン */
+        .row { border-bottom: 1px solid #222; padding: 8px 5px; display: flex; font-size: 0.9rem; }
+        .num-id { color: #fff; width: 60px; font-weight: bold; }
+        .formula { flex: 1; }
+        .missing-item { padding: 3px 0; border-bottom: 1px solid #200; }
+
+        /* スクロールバー調整 */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #333; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>SEQUENTIAL GENERATOR: 1-9</h1>
-    <p>0から順番に数式を生成し、羅列します。</p>
+    <h1>MATH DISCOVERY ENGINE</h1>
+    <div id="stats">Ready: 0 - 11111</div>
+    <div class="controls">
+        <button id="startBtn" onclick="startProcess()">START ANALYSIS</button>
+    </div>
 </div>
 
-<div class="controls">
-    <button id="startBtn" onclick="startGenerating()">START GENERATING</button>
-</div>
+<div class="main-layout">
+    <div class="column">
+        <div class="column-header">FOUND FORMULAS</div>
+        <div id="found-list"></div>
+    </div>
 
-<div id="stats" class="stats">Ready to start...</div>
-<div id="log-container"></div>
+    <div class="missing-column">
+        <div class="column-header" style="color: #ff4444;">MISSING NUMBERS</div>
+        <div id="missing-list"></div>
+    </div>
+</div>
 
 <script>
 let currentNum = 0;
-let isRunning = false;
+const maxNum = 11111;
 const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const memo = new Map();
 
@@ -40,26 +68,20 @@ const memo = new Map();
 function getPossibleValues(arr) {
     const key = arr.join(',');
     if (memo.has(key)) return memo.get(key);
-
     let res = new Map();
-    let combined = parseInt(arr.join(''));
-    res.set(combined, arr.join(''));
-
+    res.set(parseInt(arr.join('')), arr.join(''));
     for (let i = 1; i < arr.length; i++) {
         let lefts = getPossibleValues(arr.slice(0, i));
         let rights = getPossibleValues(arr.slice(i));
-
         for (let [lVal, lExpr] of lefts) {
             for (let [rVal, rExpr] of rights) {
                 res.set(lVal + rVal, `(${lExpr}+${rExpr})`);
                 res.set(lVal - rVal, `(${lExpr}-${rExpr})`);
                 res.set(lVal * rVal, `(${lExpr}*${rExpr})`);
                 if (rVal !== 0 && lVal % rVal === 0) res.set(lVal / rVal, `(${lExpr}/${rExpr})`);
-                
-                // 累乗制限
-                if (rVal > 1 && rVal < 6 && lVal < 15) {
+                if (rVal > 1 && rVal < 7 && lVal < 20) {
                     let pVal = Math.pow(lVal, rVal);
-                    if (pVal < 100000) res.set(pVal, `(${lExpr}^${rExpr})`);
+                    if (pVal < 1000000) res.set(pVal, `(${lExpr}^${rExpr})`);
                 }
             }
         }
@@ -68,40 +90,49 @@ function getPossibleValues(arr) {
     return res;
 }
 
-// すべての可能性を最初に一括計算（1-9の全パターンはブラウザでも数秒で終わります）
-console.log("Pre-calculating all patterns...");
+// 事前計算（全パターンをメモリに展開）
 const allResults = getPossibleValues(nums);
 
-function startGenerating() {
-    if (isRunning) return;
-    isRunning = true;
+function startProcess() {
     document.getElementById('startBtn').disabled = true;
-    generateNext();
+    processNext();
 }
 
-function generateNext() {
-    if (currentNum > 11111) return;
+function processNext() {
+    if (currentNum > maxNum) {
+        document.getElementById('stats').innerText = "ANALYSIS COMPLETE.";
+        return;
+    }
 
-    const container = document.getElementById('log-container');
+    const foundList = document.getElementById('found-list');
+    const missingList = document.getElementById('missing-list');
     const stats = document.getElementById('stats');
-    
+
     const formula = allResults.get(currentNum);
 
     if (formula) {
+        // 左側に追加
         const row = document.createElement('div');
         row.className = 'row';
-        row.innerHTML = `
-            <span class="num">${currentNum}</span>
-            <span class="formula">= ${formula.replace(/\^/g, '<sup>').replace(/\)/g, '</sup>)') /* 簡易的な累乗表示 */}</span>
-        `;
-        container.appendChild(row);
+        row.innerHTML = `<span class="num-id">${currentNum}</span><span class="formula">= ${formula}</span>`;
+        foundList.appendChild(row);
+    } else {
+        // 右側に追加
+        const item = document.createElement('div');
+        item.className = 'missing-item';
+        item.innerText = `No.${currentNum} - NO DATA`;
+        missingList.appendChild(item);
+        // 欠番が見つかったら自動でスクロール
+        missingList.scrollTop = missingList.scrollHeight;
     }
 
-    stats.innerText = `Current progress: ${currentNum} / 11111`;
-    currentNum++;
+    if (currentNum % 10 === 0) {
+        stats.innerText = `Analyzing: ${currentNum} / ${maxNum}`;
+    }
 
-    // 少し待機して次の数字へ（ブラウザが固まらないように＆羅列していく様子を見せるため）
-    setTimeout(generateNext, 10); 
+    currentNum++;
+    // 描画をスムーズにするために少し待機（数値を上げるとゆっくり流れます）
+    setTimeout(processNext, 1);
 }
 </script>
 
