@@ -2,56 +2,203 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Twin Route Solver</title>
+    <title>Sequential Logic Terminal</title>
     <style>
-        :root { --neon: #00ff41; --bg: #0d0d0d; --card: #1a1a1a; --asc: #00ff41; --desc: #00d4ff; }
-        body { font-family: 'Consolas', monospace; background: var(--bg); color: var(--neon); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding-top: 50px; }
-        
-        .container { background: var(--card); border: 2px solid var(--neon); padding: 40px; border-radius: 8px; width: 90%; max-width: 700px; box-shadow: 0 0 30px rgba(0,255,65,0.1); text-align: center; }
-        h1 { font-size: 1.4rem; margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        :root {
+            --bg: #0a0b10;
+            --panel: #161b22;
+            --neon-asc: #00ff95;
+            --neon-desc: #00d4ff;
+            --text-main: #e6edf3;
+            --text-dim: #8b949e;
+            --accent: #f0f6fc;
+        }
 
-        .search-box { margin-bottom: 40px; }
-        input { background: #000; border: 2px solid var(--neon); color: #fff; padding: 15px; font-size: 24px; width: 180px; text-align: center; outline: none; border-radius: 4px; }
-        button { background: var(--neon); color: #000; border: none; padding: 15px 35px; font-size: 18px; cursor: pointer; font-weight: bold; border-radius: 4px; margin-left: 10px; transition: 0.2s; }
-        button:hover { background: #fff; transform: translateY(-2px); }
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
 
-        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .res-card { background: #000; border: 1px solid #333; padding: 25px; border-radius: 6px; min-height: 120px; transition: 0.3s; }
-        .res-card h2 { margin: 0 0 15px 0; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-        .formula { font-size: 1.3rem; color: #fff; word-break: break-all; line-height: 1.4; }
-        
-        .asc-title { border-bottom: 2px solid var(--asc); padding-bottom: 5px; margin-bottom: 15px; display: inline-block; }
-        .desc-title { border-bottom: 2px solid var(--desc); padding-bottom: 5px; margin-bottom: 15px; display: inline-block; }
-        .no-sol { color: #555; font-style: italic; font-size: 0.9rem; }
-        
-        #status { height: 20px; margin-bottom: 10px; font-size: 0.8rem; color: var(--desc); }
+        .container {
+            width: 90%;
+            max-width: 850px;
+            background: var(--panel);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            position: relative;
+        }
+
+        /* 装飾的な背景要素 */
+        .container::before {
+            content: "SEQ_LOGIC_v4.0";
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-family: monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 5px;
+            margin-bottom: 40px;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        /* 検索セクション */
+        .search-section {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        input {
+            background: rgba(0,0,0,0.3);
+            border: 2px solid #30363d;
+            border-radius: 12px;
+            color: #fff;
+            padding: 15px 25px;
+            font-size: 1.5rem;
+            width: 200px;
+            transition: all 0.3s ease;
+            text-align: center;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--neon-asc);
+            box-shadow: 0 0 15px rgba(0, 255, 149, 0.2);
+        }
+
+        button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            padding: 0 35px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* リザルトグリッド */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .res-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 25px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .res-card:hover {
+            border-color: #444;
+        }
+
+        .label {
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .formula {
+            font-size: 1.4rem;
+            font-family: 'Consolas', monospace;
+            color: var(--accent);
+            text-align: center;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .no-sol {
+            color: #484f58;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        #status-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        /* アニメーション */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>SEQUENTIAL SEARCH ENGINE</h1>
+    <h1>Sequential Logic</h1>
     
-    <div id="status"></div>
-    <div class="search-box">
-        <input type="number" id="target" placeholder="100" autofocus>
+    <div class="search-section">
+        <input type="number" id="target" placeholder="Enter Num" autofocus>
         <button onclick="solveBoth()">SOLVE</button>
     </div>
 
     <div class="results-grid">
         <div class="res-card" id="asc-card">
-            <div class="asc-title" style="color:var(--asc)">ASCENDING (1→9)</div>
+            <div class="label" style="color: var(--neon-asc)">Ascending 1 &rarr; 9</div>
             <div id="asc-out" class="formula">--</div>
         </div>
         <div class="res-card" id="desc-card">
-            <div class="desc-title" style="color:var(--desc)">DESCENDING (9→1)</div>
+            <div class="label" style="color: var(--neon-desc)">Descending 9 &rarr; 1</div>
             <div id="desc-out" class="formula">--</div>
         </div>
     </div>
+
+    <div id="status-bar">SYSTEM READY // WAITING FOR INPUT</div>
 </div>
 
 <script>
-// メモ化をグローバルに保持（一度計算したパターンは次から一瞬）
 const memo = new Map();
 
 function getMathPatterns(numbers) {
@@ -59,7 +206,6 @@ function getMathPatterns(numbers) {
     if (memo.has(key)) return memo.get(key);
 
     let res = new Map();
-    // 結合 (1,2 -> 12)
     res.set(parseInt(numbers.join('')), numbers.join(''));
 
     for (let i = 1; i < numbers.length; i++) {
@@ -68,7 +214,6 @@ function getMathPatterns(numbers) {
 
         for (let [lv, le] of lefts) {
             for (let [rv, re] of rights) {
-                // 四則演算のみに絞って爆速化
                 res.set(lv + rv, `(${le}+${re})`);
                 res.set(lv - rv, `(${le}-${re})`);
                 res.set(lv * rv, `(${le}*${re})`);
@@ -82,39 +227,44 @@ function getMathPatterns(numbers) {
 
 function solveBoth() {
     const val = parseInt(document.getElementById('target').value);
-    const status = document.getElementById('status');
+    const statusBar = document.getElementById('status-bar');
     const ascOut = document.getElementById('asc-out');
     const descOut = document.getElementById('desc-out');
+    const cards = document.querySelectorAll('.res-card');
 
     if (isNaN(val)) return;
 
-    status.innerText = "ALGORITHMS RUNNING...";
+    statusBar.innerText = "EXECUTING LOGIC GATES...";
     
-    // UIを固まらせないための少しの遅延
+    // 計算を非同期にしてUIに一瞬反映させる
     setTimeout(() => {
-        // 1→9 の探索
         const ascMap = getMathPatterns([1,2,3,4,5,6,7,8,9]);
         const ascFormula = ascMap.get(val);
-        ascOut.innerHTML = ascFormula ? clean(ascFormula) : '<span class="no-sol">NOT FOUND</span>';
-
-        // 9→1 の探索
+        
         const descMap = getMathPatterns([9,8,7,6,5,4,3,2,1]);
         const descFormula = descMap.get(val);
-        descOut.innerHTML = descFormula ? clean(descFormula) : '<span class="no-sol">NOT FOUND</span>';
 
-        status.innerText = "DONE.";
-    }, 10);
+        // 表示の更新とアニメーションのトリガー
+        ascOut.innerHTML = ascFormula ? clean(ascFormula) : '<span class="no-sol">NO_DATA</span>';
+        descOut.innerHTML = descFormula ? clean(descFormula) : '<span class="no-sol">NO_DATA</span>';
+        
+        cards.forEach(card => {
+            card.classList.remove('fade-in');
+            void card.offsetWidth; // reflow
+            card.classList.add('fade-in');
+        });
+
+        statusBar.innerText = "CALCULATION COMPLETE.";
+    }, 50);
 }
 
 function clean(str) {
-    // 一番外側のカッコを外す
     if (str.startsWith('(') && str.endsWith(')')) {
         return str.substring(1, str.length - 1);
     }
     return str;
 }
 
-// Enterキーでも検索できるように
 document.getElementById('target').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') solveBoth();
 });
