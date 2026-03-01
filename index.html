@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Sequential Logic Engine v4.7</title>
+    <title>Sequential Logic Engine v4.8</title>
     <style>
         :root {
             --bg: #05070a;
@@ -16,8 +16,7 @@
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
             background-color: var(--bg);
-            background-image: 
-                radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
             background-size: 40px 40px;
             color: #fff;
             display: flex;
@@ -37,22 +36,6 @@
             padding: 50px;
             box-shadow: 0 40px 100px rgba(0,0,0,0.8);
             position: relative;
-            overflow: hidden;
-        }
-
-        /* スキャンライン演出 */
-        .terminal-container::after {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 2px;
-            background: rgba(0, 212, 255, 0.1);
-            animation: scan 4s linear infinite;
-            pointer-events: none;
-        }
-
-        @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
         }
 
         h1 {
@@ -63,52 +46,55 @@
             color: var(--accent);
             text-transform: uppercase;
             font-size: 1.5rem;
-            opacity: 0.9;
         }
 
+        /* 入力エリアのレイアウト修正 */
         .input-group {
             display: flex;
             justify-content: center;
-            position: relative;
+            align-items: center;
+            gap: 20px; /* 入力欄とボタンの間の距離 */
             margin-bottom: 60px;
         }
 
         input {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid var(--border);
-            border-radius: 100px;
+            border-radius: 16px;
             color: #fff;
-            padding: 15px 40px;
-            font-size: 2rem;
-            width: 240px;
+            padding: 15px 25px;
+            font-size: 1.8rem;
+            width: 260px;
             text-align: center;
             outline: none;
             transition: 0.4s;
-            font-weight: 200;
+            font-weight: 300;
         }
 
         input:focus {
             border-color: var(--neon-desc);
-            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
         }
 
-        button {
-            position: absolute;
-            right: calc(50% - 200px);
+        /* ボタンの重なりを解消 */
+        .solve-btn {
             background: none;
             border: 1px solid var(--neon-asc);
             color: var(--neon-asc);
-            border-radius: 100px;
-            width: 50px; height: 50px;
+            border-radius: 16px;
+            padding: 0 25px;
+            height: 60px; /* 入力欄の高さに合わせる */
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1rem;
+            font-weight: bold;
             transition: 0.3s;
             display: flex;
             justify-content: center;
             align-items: center;
+            white-space: nowrap;
         }
 
-        button:hover {
+        .solve-btn:hover {
             background: var(--neon-asc);
             color: #000;
             box-shadow: 0 0 20px var(--neon-asc);
@@ -126,12 +112,6 @@
             border-radius: 20px;
             padding: 30px;
             text-align: center;
-            transition: 0.3s;
-        }
-
-        .data-card:hover {
-            background: rgba(255, 255, 255, 0.04);
-            transform: translateY(-5px);
         }
 
         .card-label {
@@ -144,7 +124,7 @@
 
         .formula-output {
             font-size: 1.4rem;
-            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-family: 'Consolas', monospace;
             color: #fff;
             min-height: 1.5em;
             word-break: break-all;
@@ -157,7 +137,7 @@
             text-align: center;
             font-size: 0.7rem;
             font-family: monospace;
-            color: var(--text-dim);
+            color: #8b949e;
             opacity: 0.4;
         }
     </style>
@@ -169,7 +149,7 @@
     
     <div class="input-group">
         <input type="number" id="target" value="201186" autocomplete="off">
-        <button onclick="solve()">&rarr;</button>
+        <button class="solve-btn" onclick="solve()">SOLVE</button>
     </div>
 
     <div class="results-wrapper">
