@@ -2,124 +2,123 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Mega-Target Solver</title>
+    <title>Twin Route Solver</title>
     <style>
-        :root { --neon: #00ff41; --bg: #0d0d0d; }
-        body { font-family: 'Consolas', monospace; background: var(--bg); color: var(--neon); text-align: center; padding: 20px; }
-        .container { background: #1a1a1a; border: 2px solid var(--neon); padding: 30px; display: inline-block; width: 90%; max-width: 800px; box-shadow: 0 0 50px rgba(0,255,65,0.1); }
-        .input-group { margin: 20px 0; display: flex; justify-content: center; gap: 10px; }
-        input { background: #000; border: 1px solid var(--neon); color: #fff; padding: 15px; font-size: 24px; width: 200px; outline: none; }
-        button { background: var(--neon); color: #000; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; font-size: 18px; }
-        #status { margin-bottom: 20px; color: #ffcc00; font-size: 0.9rem; }
-        .result-panel { background: #000; border: 1px solid #333; padding: 20px; border-radius: 8px; margin-top: 20px; }
-        .formula { font-size: 1.6rem; color: #fff; word-break: break-all; min-height: 1.5em; }
-        .fact { color: #ff00ff; }
+        :root { --neon: #00ff41; --bg: #0d0d0d; --card: #1a1a1a; --asc: #00ff41; --desc: #00d4ff; }
+        body { font-family: 'Consolas', monospace; background: var(--bg); color: var(--neon); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding-top: 50px; }
+        
+        .container { background: var(--card); border: 2px solid var(--neon); padding: 40px; border-radius: 8px; width: 90%; max-width: 700px; box-shadow: 0 0 30px rgba(0,255,65,0.1); text-align: center; }
+        h1 { font-size: 1.4rem; margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+
+        .search-box { margin-bottom: 40px; }
+        input { background: #000; border: 2px solid var(--neon); color: #fff; padding: 15px; font-size: 24px; width: 180px; text-align: center; outline: none; border-radius: 4px; }
+        button { background: var(--neon); color: #000; border: none; padding: 15px 35px; font-size: 18px; cursor: pointer; font-weight: bold; border-radius: 4px; margin-left: 10px; transition: 0.2s; }
+        button:hover { background: #fff; transform: translateY(-2px); }
+
+        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .res-card { background: #000; border: 1px solid #333; padding: 25px; border-radius: 6px; min-height: 120px; transition: 0.3s; }
+        .res-card h2 { margin: 0 0 15px 0; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .formula { font-size: 1.3rem; color: #fff; word-break: break-all; line-height: 1.4; }
+        
+        .asc-title { border-bottom: 2px solid var(--asc); padding-bottom: 5px; margin-bottom: 15px; display: inline-block; }
+        .desc-title { border-bottom: 2px solid var(--desc); padding-bottom: 5px; margin-bottom: 15px; display: inline-block; }
+        .no-sol { color: #555; font-style: italic; font-size: 0.9rem; }
+        
+        #status { height: 20px; margin-bottom: 10px; font-size: 0.8rem; color: var(--desc); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>MEGA-TARGET SOLVER</h1>
-    <p>123456789 or 987654321</p>
+    <h1>SEQUENTIAL SEARCH ENGINE</h1>
     
-    <div class="input-group">
-        <input type="number" id="target" value="2015719">
-        <button onclick="startDeepSearch()">FAST SOLVE</button>
+    <div id="status"></div>
+    <div class="search-box">
+        <input type="number" id="target" placeholder="100" autofocus>
+        <button onclick="solveBoth()">SOLVE</button>
     </div>
-    
-    <div id="status">Ready.</div>
 
-    <div class="result-panel">
-        <div id="res-label" style="font-size: 0.7rem; color: #888; margin-bottom: 10px;">FOUND FORMULA</div>
-        <div id="output" class="formula">--</div>
+    <div class="results-grid">
+        <div class="res-card" id="asc-card">
+            <div class="asc-title" style="color:var(--asc)">ASCENDING (1→9)</div>
+            <div id="asc-out" class="formula">--</div>
+        </div>
+        <div class="res-card" id="desc-card">
+            <div class="desc-title" style="color:var(--desc)">DESCENDING (9→1)</div>
+            <div id="desc-out" class="formula">--</div>
+        </div>
     </div>
 </div>
 
 <script>
-// 階乗テーブルをグローバルに
-const F = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
+// メモ化をグローバルに保持（一度計算したパターンは次から一瞬）
+const memo = new Map();
 
-async function startDeepSearch() {
-    const target = parseInt(document.getElementById('target').value);
-    const output = document.getElementById('output');
-    const status = document.getElementById('status');
-    
-    output.innerText = "Searching...";
-    status.innerText = "Analyzing math patterns (Non-blocking)...";
+function getMathPatterns(numbers) {
+    const key = numbers.join(',');
+    if (memo.has(key)) return memo.get(key);
 
-    // 昇順と降順を順番に（または並列で）試す
-    const modes = [
-        [1, 2, 3, 4, 5, 6, 7, 8, 9],
-        [9, 8, 7, 6, 5, 4, 3, 2, 1]
-    ];
+    let res = new Map();
+    // 結合 (1,2 -> 12)
+    res.set(parseInt(numbers.join('')), numbers.join(''));
 
-    let found = null;
+    for (let i = 1; i < numbers.length; i++) {
+        const lefts = getMathPatterns(numbers.slice(0, i));
+        const rights = getMathPatterns(numbers.slice(i));
 
-    for (let nums of modes) {
-        status.innerText = `Trying pattern: [${nums.join('')}]...`;
-        found = await solve(nums, target);
-        if (found) break;
-    }
-
-    output.innerHTML = found ? format(found) : "NOT FOUND (Complexity Limit Exceeded)";
-    status.innerText = "Analysis Complete.";
-}
-
-async function solve(nums, target) {
-    const memo = new Map();
-
-    async function compute(arr) {
-        const key = arr.join(',');
-        if (memo.has(key)) return memo.get(key);
-
-        let res = new Map();
-        
-        // 1. 数字の結合
-        let combined = parseInt(arr.join(''));
-        if (combined < 1e15) res.set(combined, arr.join(''));
-        
-        // 2. 階乗パーツ (1桁の時のみ)
-        if (arr.length === 1 && arr[0] <= 9 && arr[0] >= 3) {
-            res.set(F[arr[0]], `${arr[0]}!`);
-        }
-
-        for (let i = 1; i < arr.length; i++) {
-            // 処理を細かく切ってフリーズを回避
-            if (arr.length >= 8) await new Promise(resolve => setTimeout(resolve, 0));
-
-            let lefts = await compute(arr.slice(0, i));
-            let rights = await compute(arr.slice(i));
-
-            for (let [lv, le] of lefts) {
-                for (let [rv, re] of rights) {
-                    // 基本演算
-                    res.set(lv + rv, `(${le}+${re})`);
-                    res.set(lv - rv, `(${le}-${re})`);
-                    res.set(lv * rv, `(${le}*${re})`);
-                    if (rv !== 0 && lv % rv === 0) res.set(lv / rv, `(${le}/${re})`);
-
-                    // 巨大数へのブースト（累乗）
-                    if (rv >= 2 && rv <= 10 && lv >= 2 && lv <= 50) {
-                        let pv = Math.pow(lv, rv);
-                        if (pv > 0 && pv < 1e12 && Number.isSafeInteger(pv)) {
-                            res.set(pv, `(${le}^${re})`);
-                        }
-                    }
-                }
+        for (let [lv, le] of lefts) {
+            for (let [rv, re] of rights) {
+                // 四則演算のみに絞って爆速化
+                res.set(lv + rv, `(${le}+${re})`);
+                res.set(lv - rv, `(${le}-${re})`);
+                res.set(lv * rv, `(${le}*${re})`);
+                if (rv !== 0 && lv % rv === 0) res.set(lv / rv, `(${le}/${re})`);
             }
         }
-        memo.set(key, res);
-        return res;
     }
-
-    const finalMap = await compute(nums);
-    return finalMap.get(target);
+    memo.set(key, res);
+    return res;
 }
 
-function format(s) {
-    return s.replace(/\^/g, '<sup>').replace(/\)/g, '</sup>)')
-            .replace(/(\d+!)/g, '<span class="fact">$1</span>');
+function solveBoth() {
+    const val = parseInt(document.getElementById('target').value);
+    const status = document.getElementById('status');
+    const ascOut = document.getElementById('asc-out');
+    const descOut = document.getElementById('desc-out');
+
+    if (isNaN(val)) return;
+
+    status.innerText = "ALGORITHMS RUNNING...";
+    
+    // UIを固まらせないための少しの遅延
+    setTimeout(() => {
+        // 1→9 の探索
+        const ascMap = getMathPatterns([1,2,3,4,5,6,7,8,9]);
+        const ascFormula = ascMap.get(val);
+        ascOut.innerHTML = ascFormula ? clean(ascFormula) : '<span class="no-sol">NOT FOUND</span>';
+
+        // 9→1 の探索
+        const descMap = getMathPatterns([9,8,7,6,5,4,3,2,1]);
+        const descFormula = descMap.get(val);
+        descOut.innerHTML = descFormula ? clean(descFormula) : '<span class="no-sol">NOT FOUND</span>';
+
+        status.innerText = "DONE.";
+    }, 10);
 }
+
+function clean(str) {
+    // 一番外側のカッコを外す
+    if (str.startsWith('(') && str.endsWith(')')) {
+        return str.substring(1, str.length - 1);
+    }
+    return str;
+}
+
+// Enterキーでも検索できるように
+document.getElementById('target').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') solveBoth();
+});
 </script>
+
 </body>
 </html>
