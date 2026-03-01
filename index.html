@@ -2,93 +2,74 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Math Discovery 1111</title>
+    <title>The Sequential Logic Engine</title>
     <style>
-        :root { --neon-green: #00ff41; --bg-black: #0d0d0d; --panel-bg: #1a1a1a; --error-red: #ff3333; --user-blue: #00ccff; }
-        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        :root { --neon-green: #00ff41; --bg-black: #0a0a0a; --accent-blue: #00d4ff; }
+        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding-top: 50px; }
         
-        .header { padding: 15px 25px; border-bottom: 2px solid var(--neon-green); background: var(--bg-black); z-index: 10; }
-        .controls { margin-top: 10px; display: flex; align-items: center; gap: 15px; }
+        .container { background: #111; border: 1px solid var(--neon-green); padding: 40px; border-radius: 5px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); width: 90%; max-width: 600px; text-align: center; }
+        h1 { font-size: 1.5rem; letter-spacing: 3px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 10px; }
         
-        button { background: var(--neon-green); color: #000; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold; }
-        .mode-btn { background: #333; color: #eee; border: 1px solid #444; }
-        .mode-btn.active { background: var(--user-blue); color: #000; border-color: var(--user-blue); }
+        .input-box { margin-bottom: 30px; }
+        input { background: #000; border: 1px solid var(--neon-green); color: #fff; padding: 15px; font-size: 24px; width: 150px; text-align: center; outline: none; }
+        button { background: var(--neon-green); color: #000; border: none; padding: 15px 30px; font-size: 18px; cursor: pointer; font-weight: bold; margin-left: 10px; transition: 0.2s; }
+        button:hover { background: #fff; transform: scale(1.05); }
 
-        .main-layout { display: flex; flex: 1; overflow: hidden; }
-        .column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; }
-        #found-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column-reverse; }
-
-        .missing-column { width: 300px; display: flex; flex-direction: column; background: #080808; }
-        #missing-list { flex: 1; overflow-y: auto; padding: 10px; color: var(--error-red); font-size: 0.9rem; }
-
-        .column-header { padding: 8px; background: var(--panel-bg); font-size: 0.8rem; font-weight: bold; text-align: center; border-bottom: 1px solid #333; }
-        .row { border-bottom: 1px solid #1a1a1a; padding: 6px 10px; display: flex; }
-        .num-id { color: #fff; width: 50px; font-weight: bold; }
-        .formula { flex: 1; }
-        .user-found { color: var(--user-blue); border-left: 3px solid var(--user-blue); }
-
-        .missing-item { padding: 8px; border-bottom: 1px solid #200; cursor: pointer; display: flex; justify-content: space-between; }
-        .missing-item:hover { background: #200; color: #fff; }
+        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .res-card { background: #000; border: 1px solid #333; padding: 20px; border-radius: 4px; min-height: 100px; }
+        .res-card h3 { margin-top: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; }
+        .formula { font-size: 1.2rem; color: #fff; word-break: break-all; margin-top: 10px; }
+        .not-found { color: #ff4444; font-size: 0.9rem; }
         
-        #progress-bar { height: 4px; background: #004411; width: 0%; transition: width 0.1s; }
+        #loading { display: none; margin: 20px; font-style: italic; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h1 style="margin:0; font-size: 1.2rem;">MATH ENGINE [Range: 0 - 1111]</h1>
-    <div class="controls">
-        <button id="startBtn" onclick="startProcess()">START ANALYSIS</button>
-        <button id="upBtn" class="mode-btn active" onclick="setMode('up')">ASC (1→9)</button>
-        <button id="downBtn" class="mode-btn" onclick="setMode('down')">DESC (9→1)</button>
-        <div id="stats">Ready</div>
+<div class="container">
+    <h1>SEQUENTIAL LOGIC ENGINE</h1>
+    
+    <div class="input-box">
+        <input type="number" id="targetNum" placeholder="10000" min="0" max="11111">
+        <button onclick="runSearch()">SOLVE</button>
     </div>
-</div>
-<div id="progress-bar"></div>
 
-<div class="main-layout">
-    <div class="column">
-        <div class="column-header">FOUND FORMULAS</div>
-        <div id="found-list"></div>
-    </div>
-    <div class="missing-column">
-        <div class="column-header">MISSING (CLICK TO ADD)</div>
-        <div id="missing-list"></div>
+    <div id="loading">PROCESSING ALGORITHMS...</div>
+
+    <div class="results-grid">
+        <div class="res-card">
+            <h3>ASCENDING (1→9)</h3>
+            <div id="asc-res" class="formula">--</div>
+        </div>
+        <div class="res-card">
+            <h3>DESCENDING (9→1)</h3>
+            <div id="desc-res" class="formula">--</div>
+        </div>
     </div>
 </div>
 
 <script>
-let currentNum = 0;
-const maxNum = 1111; // 1111に戻しました
-let currentNums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-let isRunning = false;
-let userSolutions = new Map();
-
-function setMode(mode) {
-    if (isRunning) return;
-    document.getElementById('upBtn').classList.toggle('active', mode === 'up');
-    document.getElementById('downBtn').classList.toggle('active', mode === 'down');
-    currentNums = (mode === 'up') ? [1,2,3,4,5,6,7,8,9] : [9,8,7,6,5,4,3,2,1];
-    document.getElementById('found-list').innerHTML = "";
-    document.getElementById('missing-list').innerHTML = "";
-    currentNum = 0;
-}
-
 const memo = new Map();
+
 function getPossibleValues(arr) {
     const key = arr.join(',');
     if (memo.has(key)) return memo.get(key);
+
     let res = new Map();
     res.set(parseInt(arr.join('')), arr.join(''));
+
     for (let i = 1; i < arr.length; i++) {
         let lefts = getPossibleValues(arr.slice(0, i));
         let rights = getPossibleValues(arr.slice(i));
+
         for (let [lVal, lExpr] of lefts) {
             for (let [rVal, rExpr] of rights) {
                 res.set(lVal + rVal, `(${lExpr}+${rExpr})`);
                 res.set(lVal - rVal, `(${lExpr}-${rExpr})`);
                 res.set(lVal * rVal, `(${lExpr}*${rExpr})`);
                 if (rVal !== 0 && lVal % rVal === 0) res.set(lVal / rVal, `(${lExpr}/${rExpr})`);
+                
                 if (rVal > 1 && rVal < 7 && lVal < 20) {
                     let pVal = Math.pow(lVal, rVal);
                     if (pVal < 1000000) res.set(pVal, `(${lExpr}^${rExpr})`);
@@ -100,58 +81,41 @@ function getPossibleValues(arr) {
     return res;
 }
 
-function startProcess() {
-    isRunning = true;
-    document.getElementById('startBtn').disabled = true;
-    const allResults = getPossibleValues(currentNums);
-    
-    function process() {
-        if (currentNum > maxNum) {
-            isRunning = false;
-            document.getElementById('stats').innerText = "DONE.";
-            return;
-        }
+function runSearch() {
+    const target = parseInt(document.getElementById('targetNum').value);
+    const loading = document.getElementById('loading');
+    const ascDisp = document.getElementById('asc-res');
+    const descDisp = document.getElementById('desc-res');
 
-        let formula = allResults.get(currentNum);
-        let isUser = false;
-        if (!formula && userSolutions.has(currentNum)) {
-            formula = userSolutions.get(currentNum);
-            isUser = true;
-        }
+    if (isNaN(target)) return;
 
-        if (formula) {
-            const row = document.createElement('div');
-            row.className = 'row' + (isUser ? ' user-found' : '');
-            row.innerHTML = `<span class="num-id">${currentNum}</span><span class="formula">= ${formula}</span>`;
-            document.getElementById('found-list').appendChild(row);
-        } else {
-            const item = document.createElement('div');
-            item.className = 'missing-item';
-            item.id = `miss-${currentNum}`;
-            item.innerHTML = `<span>No.${currentNum}</span><span>+</span>`;
-            item.onclick = () => {
-                const sol = prompt(`No.${currentNum} の式を入力:`);
-                if(sol) {
-                    userSolutions.set(parseInt(item.id.split('-')[1]), sol);
-                    item.remove();
-                    const row = document.createElement('div');
-                    row.className = 'row user-found';
-                    row.innerHTML = `<span class="num-id">${item.id.split('-')[1]}</span><span class="formula">= ${sol} (User)</span>`;
-                    document.getElementById('found-list').appendChild(row);
-                }
-            };
-            document.getElementById('missing-list').appendChild(item);
-        }
+    loading.style.display = "block";
+    ascDisp.innerText = "--";
+    descDisp.innerText = "--";
 
-        if (currentNum % 10 === 0) {
-            document.getElementById('progress-bar').style.width = (currentNum / maxNum * 100) + "%";
-            document.getElementById('stats').innerText = `Scan: ${currentNum}`;
-        }
-        currentNum++;
-        setTimeout(process, 1);
-    }
-    process();
+    // ブラウザのフリーズを防ぐためにsetTimeoutを使用
+    setTimeout(() => {
+        // 1-9の計算
+        const ascMap = getPossibleValues([1,2,3,4,5,6,7,8,9]);
+        const ascResult = ascMap.get(target);
+        ascDisp.innerHTML = ascResult ? clean(ascResult) : '<span class="not-found">NO SOLUTION</span>';
+
+        // 9-1の計算
+        const descMap = getPossibleValues([9,8,7,6,5,4,3,2,1]);
+        const descResult = descMap.get(target);
+        descDisp.innerHTML = descResult ? clean(descResult) : '<span class="not-found">NO SOLUTION</span>';
+
+        loading.style.display = "none";
+    }, 100);
+}
+
+function clean(str) {
+    // 一番外側のカッコを削除し、^を表示用に調整
+    let s = str;
+    if (s.startsWith('(') && s.endsWith(')')) s = s.substring(1, s.length - 1);
+    return s.replace(/\^/g, '<sup>').replace(/\)/g, '</sup>)');
 }
 </script>
+
 </body>
 </html>
