@@ -2,58 +2,62 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Math Puzzle: discovery & Missing</title>
+    <title>Crazy Math: Human vs AI</title>
     <style>
-        :root { --neon-green: #00ff41; --bg-black: #0d0d0d; --panel-bg: #1a1a1a; }
-        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        :root { --neon-green: #00ff41; --bg-black: #0d0d0d; --panel-bg: #1a1a1a; --error-red: #ff3333; --user-blue: #00ccff; }
+        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* ヘッダー */
-        .header { padding: 20px; border-bottom: 2px solid var(--neon-green); background: var(--bg-black); }
-        .controls { margin-top: 10px; }
-        button { background: var(--neon-green); color: #000; border: none; padding: 10px 25px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .header { padding: 15px 25px; border-bottom: 2px solid var(--neon-green); background: var(--bg-black); z-index: 10; }
+        .controls { margin-top: 10px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        
+        button { background: var(--neon-green); color: #000; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #fff; }
         button:disabled { background: #004411; color: #008822; }
+        
+        .mode-btn { background: #333; color: #eee; border: 1px solid #444; }
+        .mode-btn.active { background: var(--user-blue); color: #000; border-color: var(--user-blue); }
 
-        /* メインコンテンツ（左右分割） */
         .main-layout { display: flex; flex: 1; overflow: hidden; }
-
-        /* 左側：見つかった数式 */
         .column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; }
-        .column-header { padding: 10px; background: var(--panel-bg); font-weight: bold; text-align: center; border-bottom: 1px solid #333; }
         #found-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column-reverse; }
 
-        /* 右側：ないものリスト */
-        .missing-column { width: 300px; display: flex; flex-direction: column; background: #050505; }
-        #missing-list { flex: 1; overflow-y: auto; padding: 10px; color: #ff4444; }
+        .missing-column { width: 320px; display: flex; flex-direction: column; background: #080808; }
+        #missing-list { flex: 1; overflow-y: auto; padding: 10px; color: var(--error-red); }
 
-        /* 行のデザイン */
-        .row { border-bottom: 1px solid #222; padding: 8px 5px; display: flex; font-size: 0.9rem; }
+        .column-header { padding: 8px; background: var(--panel-bg); font-size: 0.8rem; font-weight: bold; text-align: center; border-bottom: 1px solid #333; letter-spacing: 1px; }
+
+        .row { border-bottom: 1px solid #1a1a1a; padding: 6px 10px; display: flex; align-items: center; }
         .num-id { color: #fff; width: 60px; font-weight: bold; }
-        .formula { flex: 1; }
-        .missing-item { padding: 3px 0; border-bottom: 1px solid #200; }
+        .formula { flex: 1; font-size: 0.9rem; }
+        .user-found { color: var(--user-blue); }
 
-        /* スクロールバー調整 */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #333; }
+        .missing-item { padding: 5px; border-bottom: 1px solid #200; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; }
+        .missing-item:hover { background: #200; color: #fff; }
+        .missing-item::after { content: '✎ Edit'; font-size: 0.7rem; opacity: 0.5; }
+
+        #progress-bar { height: 4px; background: #004411; width: 0%; transition: width 0.1s; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>MATH DISCOVERY ENGINE</h1>
-    <div id="stats">Ready: 0 - 11111</div>
+    <h1 style="margin:0; font-size: 1.2rem;">CRAZY MATH DISCOVERY [0 - 11111]</h1>
     <div class="controls">
-        <button id="startBtn" onclick="startProcess()">START ANALYSIS</button>
+        <button id="startBtn" onclick="startProcess()">EXECUTE SEARCH</button>
+        <button id="upBtn" class="mode-btn active" onclick="setMode('up')">ASC (1→9)</button>
+        <button id="downBtn" class="mode-btn" onclick="setMode('down')">DESC (9→1)</button>
+        <div id="stats">Ready</div>
     </div>
 </div>
+<div id="progress-bar"></div>
 
 <div class="main-layout">
     <div class="column">
-        <div class="column-header">FOUND FORMULAS</div>
+        <div class="column-header">FOUND BY AI / USER</div>
         <div id="found-list"></div>
     </div>
-
     <div class="missing-column">
-        <div class="column-header" style="color: #ff4444;">MISSING NUMBERS</div>
+        <div class="column-header">MISSING (CLICK TO SOLVE)</div>
         <div id="missing-list"></div>
     </div>
 </div>
@@ -61,10 +65,30 @@
 <script>
 let currentNum = 0;
 const maxNum = 11111;
-const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-const memo = new Map();
+let currentNums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+let isRunning = false;
+let userSolutions = new Map(); // ユーザーが入力した数式を保存
+let allResults = new Map();
 
-// --- 計算エンジン ---
+// モード切り替え
+function setMode(mode) {
+    if (isRunning) return;
+    document.getElementById('upBtn').classList.toggle('active', mode === 'up');
+    document.getElementById('downBtn').classList.toggle('active', mode === 'down');
+    currentNums = (mode === 'up') ? [1,2,3,4,5,6,7,8,9] : [9,8,7,6,5,4,3,2,1];
+    resetDisplay();
+}
+
+function resetDisplay() {
+    currentNum = 0;
+    document.getElementById('found-list').innerHTML = "";
+    document.getElementById('missing-list').innerHTML = "";
+    document.getElementById('progress-bar').style.width = "0%";
+    document.getElementById('startBtn').disabled = false;
+}
+
+// 計算エンジン（メモ化）
+const memo = new Map();
 function getPossibleValues(arr) {
     const key = arr.join(',');
     if (memo.has(key)) return memo.get(key);
@@ -90,49 +114,72 @@ function getPossibleValues(arr) {
     return res;
 }
 
-// 事前計算（全パターンをメモリに展開）
-const allResults = getPossibleValues(nums);
-
 function startProcess() {
+    isRunning = true;
     document.getElementById('startBtn').disabled = true;
+    // その時のモードで事前計算
+    allResults = getPossibleValues(currentNums);
     processNext();
 }
 
 function processNext() {
     if (currentNum > maxNum) {
-        document.getElementById('stats').innerText = "ANALYSIS COMPLETE.";
+        isRunning = false;
+        document.getElementById('stats').innerText = "COMPLETE.";
         return;
     }
 
     const foundList = document.getElementById('found-list');
     const missingList = document.getElementById('missing-list');
-    const stats = document.getElementById('stats');
+    
+    let formula = allResults.get(currentNum);
+    let isUserFound = false;
 
-    const formula = allResults.get(currentNum);
+    // AIがなくてもユーザーが投稿していたら表示
+    if (!formula && userSolutions.has(currentNum)) {
+        formula = userSolutions.get(currentNum);
+        isUserFound = true;
+    }
 
     if (formula) {
-        // 左側に追加
         const row = document.createElement('div');
-        row.className = 'row';
+        row.className = 'row' + (isUserFound ? ' user-found' : '');
         row.innerHTML = `<span class="num-id">${currentNum}</span><span class="formula">= ${formula}</span>`;
         foundList.appendChild(row);
     } else {
-        // 右側に追加
         const item = document.createElement('div');
         item.className = 'missing-item';
-        item.innerText = `No.${currentNum} - NO DATA`;
+        item.id = `missing-${currentNum}`;
+        item.innerText = `No.${currentNum}`;
+        item.onclick = () => addUserFormula(currentNum);
         missingList.appendChild(item);
-        // 欠番が見つかったら自動でスクロール
-        missingList.scrollTop = missingList.scrollHeight;
     }
 
-    if (currentNum % 10 === 0) {
-        stats.innerText = `Analyzing: ${currentNum} / ${maxNum}`;
+    if (currentNum % 20 === 0) {
+        document.getElementById('progress-bar').style.width = (currentNum / maxNum * 100) + "%";
+        document.getElementById('stats').innerText = `Analyzing: ${currentNum}`;
     }
 
     currentNum++;
-    // 描画をスムーズにするために少し待機（数値を上げるとゆっくり流れます）
-    setTimeout(processNext, 1);
+    // 11111まであるので、少し早めに設定
+    currentNum < 2000 ? setTimeout(processNext, 0) : requestAnimationFrame(processNext);
+}
+
+// ユーザー投稿機能
+function addUserFormula(id) {
+    const input = prompt(`No.${id} の数式を入力してください：\n(例: (1+2)*3+...)`);
+    if (input) {
+        userSolutions.set(id, input);
+        // 画面を更新（すでにリストにある場合は書き換え）
+        const missingItem = document.getElementById(`missing-${id}`);
+        if (missingItem) missingItem.remove();
+        
+        const foundList = document.getElementById('found-list');
+        const row = document.createElement('div');
+        row.className = 'row user-found';
+        row.innerHTML = `<span class="num-id">${id}</span><span class="formula">= ${input} (User Solution)</span>`;
+        foundList.appendChild(row);
+    }
 }
 </script>
 
