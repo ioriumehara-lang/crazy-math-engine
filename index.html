@@ -2,118 +2,134 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>The Sequential Logic Engine</title>
+    <title>Deep Sequential Logic Engine</title>
     <style>
-        :root { --neon-green: #00ff41; --bg-black: #0a0a0a; --accent-blue: #00d4ff; }
-        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding-top: 50px; }
-        
-        .container { background: #111; border: 1px solid var(--neon-green); padding: 40px; border-radius: 5px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); width: 90%; max-width: 600px; text-align: center; }
-        h1 { font-size: 1.5rem; letter-spacing: 3px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        
-        .input-box { margin-bottom: 30px; }
-        input { background: #000; border: 1px solid var(--neon-green); color: #fff; padding: 15px; font-size: 24px; width: 150px; text-align: center; outline: none; }
-        button { background: var(--neon-green); color: #000; border: none; padding: 15px 30px; font-size: 18px; cursor: pointer; font-weight: bold; margin-left: 10px; transition: 0.2s; }
-        button:hover { background: #fff; transform: scale(1.05); }
-
-        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .res-card { background: #000; border: 1px solid #333; padding: 20px; border-radius: 4px; min-height: 100px; }
-        .res-card h3 { margin-top: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; }
-        .formula { font-size: 1.2rem; color: #fff; word-break: break-all; margin-top: 10px; }
-        .not-found { color: #ff4444; font-size: 0.9rem; }
-        
-        #loading { display: none; margin: 20px; font-style: italic; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        :root { --neon-green: #00ff41; --bg-black: #050505; --accent: #00d4ff; }
+        body { font-family: 'Consolas', 'Courier New', monospace; background: var(--bg-black); color: var(--neon-green); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: #111; border: 1px solid var(--neon-green); padding: 30px; width: 95%; max-width: 800px; box-shadow: 0 0 30px rgba(0,255,65,0.1); }
+        .input-area { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        input { background: #000; border: 1px solid var(--neon-green); color: #fff; padding: 10px; font-size: 24px; width: 150px; outline: none; }
+        button { background: var(--neon-green); color: #000; border: none; padding: 10px 25px; font-size: 18px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #fff; }
+        .results-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .panel { background: #000; border: 1px solid #222; padding: 15px; position: relative; }
+        .panel h2 { font-size: 0.7rem; color: #666; margin: 0 0 10px 0; letter-spacing: 2px; }
+        .formula-display { font-size: 1.1rem; color: #fff; word-break: break-all; min-height: 1.5em; line-height: 1.6; }
+        #loading { display: none; margin: 10px; color: var(--accent); font-size: 0.9rem; }
+        sup { color: var(--accent); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>SEQUENTIAL LOGIC ENGINE</h1>
+    <h1 style="text-align:center; font-size: 1.2rem; border-bottom: 1px solid #222; padding-bottom: 15px;">DEEP SEARCH ENGINE v2.0</h1>
     
-    <div class="input-box">
-        <input type="number" id="targetNum" placeholder="10000" min="0" max="11111">
-        <button onclick="runSearch()">SOLVE</button>
+    <div class="input-area">
+        <input type="number" id="targetInput" value="10000">
+        <button onclick="deepSolve()">DEEP SEARCH</button>
     </div>
 
-    <div id="loading">PROCESSING ALGORITHMS...</div>
+    <div id="loading">CORE ENGINE OPTIMIZING... SCANNING ALL POSSIBILITIES...</div>
 
-    <div class="results-grid">
-        <div class="res-card">
-            <h3>ASCENDING (1→9)</h3>
-            <div id="asc-res" class="formula">--</div>
+    <div class="results-container">
+        <div class="panel">
+            <h2>ASCENDING (1→9)</h2>
+            <div id="asc-res" class="formula-display">--</div>
         </div>
-        <div class="res-card">
-            <h3>DESCENDING (9→1)</h3>
-            <div id="desc-res" class="formula">--</div>
+        <div class="panel">
+            <h2>DESCENDING (9→1)</h2>
+            <div id="desc-res" class="formula-display">--</div>
         </div>
     </div>
 </div>
 
 <script>
-const memo = new Map();
+// メモ化用。深い探索なので、セッション中ずっと保持する
+const globalMemo = new Map();
 
-function getPossibleValues(arr) {
-    const key = arr.join(',');
-    if (memo.has(key)) return memo.get(key);
+function getDeepValues(numbers) {
+    const key = numbers.join(',');
+    if (globalMemo.has(key)) return globalMemo.get(key);
 
-    let res = new Map();
-    res.set(parseInt(arr.join('')), arr.join(''));
+    const results = new Map();
 
-    for (let i = 1; i < arr.length; i++) {
-        let lefts = getPossibleValues(arr.slice(0, i));
-        let rights = getPossibleValues(arr.slice(i));
+    // 1. 数字の結合 (1,2,3 -> 123)
+    const combined = parseInt(numbers.join(''));
+    if (!isNaN(combined)) {
+        results.set(combined, numbers.join(''));
+    }
 
-        for (let [lVal, lExpr] of lefts) {
-            for (let [rVal, rExpr] of rights) {
-                res.set(lVal + rVal, `(${lExpr}+${rExpr})`);
-                res.set(lVal - rVal, `(${lExpr}-${rExpr})`);
-                res.set(lVal * rVal, `(${lExpr}*${rExpr})`);
-                if (rVal !== 0 && lVal % rVal === 0) res.set(lVal / rVal, `(${lExpr}/${rExpr})`);
-                
-                if (rVal > 1 && rVal < 7 && lVal < 20) {
-                    let pVal = Math.pow(lVal, rVal);
-                    if (pVal < 1000000) res.set(pVal, `(${lExpr}^${rExpr})`);
+    // 2. 木構造の全パターン分割 (再帰)
+    for (let i = 1; i < numbers.length; i++) {
+        const leftPart = numbers.slice(0, i);
+        const rightPart = numbers.slice(i);
+
+        const leftMap = getDeepValues(leftPart);
+        const rightMap = getDeepValues(rightPart);
+
+        for (const [lVal, lExpr] of leftMap) {
+            for (const [rVal, rExpr] of rightMap) {
+                // 四則演算
+                updateMap(results, lVal + rVal, `(${lExpr}+${rExpr})`);
+                updateMap(results, lVal - rVal, `(${lExpr}-${rExpr})`);
+                updateMap(results, lVal * rVal, `(${lExpr}*${rExpr})`);
+                if (rVal !== 0 && Number.isInteger(lVal / rVal)) {
+                    updateMap(results, lVal / rVal, `(${lExpr}/${rExpr})`);
+                }
+
+                // 深い探索用の累乗制限 (底が小さければ指数を大きく、底が大きければ指数を小さく)
+                if (rVal >= 0 && rVal <= 10) {
+                    if ((lVal > 0 && lVal <= 10) || (lVal > 10 && rVal <= 4)) {
+                        try {
+                            const pVal = Math.pow(lVal, rVal);
+                            if (Number.isSafeInteger(pVal) && pVal > 0) {
+                                updateMap(results, pVal, `(${lExpr}^${rExpr})`);
+                            }
+                        } catch(e) {}
+                    }
                 }
             }
         }
     }
-    memo.set(key, res);
-    return res;
+    globalMemo.set(key, results);
+    return results;
 }
 
-function runSearch() {
-    const target = parseInt(document.getElementById('targetNum').value);
+function updateMap(map, val, expr) {
+    // 短い数式を優先して保持する（可読性のため）
+    if (!map.has(val) || expr.length < map.get(val).length) {
+        map.set(val, expr);
+    }
+}
+
+function deepSolve() {
+    const target = parseInt(document.getElementById('targetInput').value);
     const loading = document.getElementById('loading');
     const ascDisp = document.getElementById('asc-res');
     const descDisp = document.getElementById('desc-res');
 
     if (isNaN(target)) return;
-
     loading.style.display = "block";
-    ascDisp.innerText = "--";
-    descDisp.innerText = "--";
 
-    // ブラウザのフリーズを防ぐためにsetTimeoutを使用
+    // UI更新のために非同期実行
     setTimeout(() => {
-        // 1-9の計算
-        const ascMap = getPossibleValues([1,2,3,4,5,6,7,8,9]);
-        const ascResult = ascMap.get(target);
-        ascDisp.innerHTML = ascResult ? clean(ascResult) : '<span class="not-found">NO SOLUTION</span>';
+        const ascMap = getDeepValues([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        const descMap = getDeepValues([9, 8, 7, 6, 5, 4, 3, 2, 1]);
 
-        // 9-1の計算
-        const descMap = getPossibleValues([9,8,7,6,5,4,3,2,1]);
-        const descResult = descMap.get(target);
-        descDisp.innerHTML = descResult ? clean(descResult) : '<span class="not-found">NO SOLUTION</span>';
+        ascDisp.innerHTML = formatResult(ascMap.get(target));
+        descDisp.innerHTML = formatResult(descMap.get(target));
 
         loading.style.display = "none";
-    }, 100);
+    }, 50);
 }
 
-function clean(str) {
-    // 一番外側のカッコを削除し、^を表示用に調整
-    let s = str;
-    if (s.startsWith('(') && s.endsWith(')')) s = s.substring(1, s.length - 1);
-    return s.replace(/\^/g, '<sup>').replace(/\)/g, '</sup>)');
+function formatResult(formula) {
+    if (!formula) return '<span style="color:#555">NOT REACHABLE</span>';
+    // 見栄えの調整
+    let f = formula;
+    if (f.startsWith('(') && f.endsWith(')')) f = f.substring(1, f.length - 1);
+    return f.replace(/\^(\d+)/g, '<sup>$1</sup>')
+            .replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
 }
 </script>
 
