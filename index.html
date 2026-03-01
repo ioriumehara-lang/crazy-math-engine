@@ -2,105 +2,106 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Real-time Crazy Math Solver</title>
+    <title>Sequential Math Generator</title>
     <style>
-        body { font-family: 'Courier New', monospace; background: #1a1a1a; color: #00ff00; text-align: center; padding: 20px; }
-        .container { border: 1px solid #00ff00; display: inline-block; padding: 30px; margin-top: 50px; background: #000; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
-        input { background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 10px; font-size: 20px; width: 100px; outline: none; }
-        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; font-size: 20px; cursor: pointer; margin-left: 10px; font-weight: bold; }
-        button:hover { background: #008800; }
-        #status { margin-top: 20px; color: #888; height: 20px; }
-        #result { margin-top: 40px; font-size: 28px; min-height: 50px; }
-        .loading { animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        body { font-family: 'Consolas', monospace; background: #0d0d0d; color: #00ff41; padding: 20px; line-height: 1.6; }
+        .header { border-bottom: 2px solid #00ff41; margin-bottom: 20px; padding-bottom: 10px; }
+        .controls { margin-bottom: 20px; }
+        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #004411; color: #008822; }
+        #log-container { display: flex; flex-direction: column-reverse; /* 新しい結果を上に */ }
+        .row { border-bottom: 1px solid #1a1a1a; padding: 5px 0; display: flex; justify-content: space-between; }
+        .num { font-weight: bold; color: #fff; width: 80px; }
+        .formula { color: #00ff41; flex-grow: 1; text-align: left; padding-left: 20px; }
+        .stats { font-size: 0.8rem; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>MATH ENGINE v1.0</h1>
-    <p>Target Number (0-11111):</p>
-    <input type="number" id="targetNum" value="100">
-    <button onclick="startSolve()">SOLVE</button>
-    
-    <div id="status"></div>
-    <div id="result"></div>
+<div class="header">
+    <h1>SEQUENTIAL GENERATOR: 1-9</h1>
+    <p>0から順番に数式を生成し、羅列します。</p>
 </div>
 
+<div class="controls">
+    <button id="startBtn" onclick="startGenerating()">START GENERATING</button>
+</div>
+
+<div id="stats" class="stats">Ready to start...</div>
+<div id="log-container"></div>
+
 <script>
-// --- 計算エンジン (JavaScript版) ---
-function solve(target) {
-    const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    
-    // 状態を管理するメモ（動的計画法）
-    let memo = new Map();
+let currentNum = 0;
+let isRunning = false;
+const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const memo = new Map();
 
-    function getPossibleValues(arr) {
-        const key = arr.join(',');
-        if (memo.has(key)) return memo.get(key);
+// --- 計算エンジン ---
+function getPossibleValues(arr) {
+    const key = arr.join(',');
+    if (memo.has(key)) return memo.get(key);
 
-        let res = new Map();
+    let res = new Map();
+    let combined = parseInt(arr.join(''));
+    res.set(combined, arr.join(''));
 
-        // 1. 数字の結合 (1,2,3 -> 123)
-        let combined = parseInt(arr.join(''));
-        res.set(combined, arr.join(''));
+    for (let i = 1; i < arr.length; i++) {
+        let lefts = getPossibleValues(arr.slice(0, i));
+        let rights = getPossibleValues(arr.slice(i));
 
-        // 2. 分割して再帰的に計算
-        for (let i = 1; i < arr.length; i++) {
-            let leftPart = arr.slice(0, i);
-            let rightPart = arr.slice(i);
-
-            let lefts = getPossibleValues(leftPart);
-            let rights = getPossibleValues(rightPart);
-
-            for (let [lVal, lExpr] of lefts) {
-                for (let [rVal, rExpr] of rights) {
-                    // 四則演算
-                    res.set(lVal + rVal, `(${lExpr}+${rExpr})`);
-                    res.set(lVal - rVal, `(${lExpr}-${rExpr})`);
-                    res.set(lVal * rVal, `(${lExpr}*${rExpr})`);
-                    if (rVal !== 0 && lVal % rVal === 0) res.set(lVal / rVal, `(${lExpr}/${rExpr})`);
-                    
-                    // 累乗 (あまりに大きくなる計算はスキップして高速化)
-                    if (rVal > 1 && rVal < 7 && lVal < 20) {
-                        let pVal = Math.pow(lVal, rVal);
-                        if (pVal < 1000000) res.set(pVal, `(${lExpr}^${rExpr})`);
-                    }
+        for (let [lVal, lExpr] of lefts) {
+            for (let [rVal, rExpr] of rights) {
+                res.set(lVal + rVal, `(${lExpr}+${rExpr})`);
+                res.set(lVal - rVal, `(${lExpr}-${rExpr})`);
+                res.set(lVal * rVal, `(${lExpr}*${rExpr})`);
+                if (rVal !== 0 && lVal % rVal === 0) res.set(lVal / rVal, `(${lExpr}/${rExpr})`);
+                
+                // 累乗制限
+                if (rVal > 1 && rVal < 6 && lVal < 15) {
+                    let pVal = Math.pow(lVal, rVal);
+                    if (pVal < 100000) res.set(pVal, `(${lExpr}^${rExpr})`);
                 }
             }
         }
-        memo.set(key, res);
-        return res;
     }
-
-    const all = getPossibleValues(nums);
-    return all.get(target) || null;
+    memo.set(key, res);
+    return res;
 }
 
-// --- 画面制御 ---
-function startSolve() {
-    const target = parseInt(document.getElementById('targetNum').value);
-    const resultDiv = document.getElementById('result');
-    const statusDiv = document.getElementById('status');
+// すべての可能性を最初に一括計算（1-9の全パターンはブラウザでも数秒で終わります）
+console.log("Pre-calculating all patterns...");
+const allResults = getPossibleValues(nums);
+
+function startGenerating() {
+    if (isRunning) return;
+    isRunning = true;
+    document.getElementById('startBtn').disabled = true;
+    generateNext();
+}
+
+function generateNext() {
+    if (currentNum > 11111) return;
+
+    const container = document.getElementById('log-container');
+    const stats = document.getElementById('stats');
     
-    resultDiv.innerHTML = "";
-    statusDiv.innerHTML = "<span class='loading'>CALCULATING...</span>";
+    const formula = allResults.get(currentNum);
 
-    // ブラウザの描画を止めないように、少し遅延させて計算開始
-    setTimeout(() => {
-        const startTime = performance.now();
-        const formula = solve(target);
-        const endTime = performance.now();
-        const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+    if (formula) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+            <span class="num">${currentNum}</span>
+            <span class="formula">= ${formula.replace(/\^/g, '<sup>').replace(/\)/g, '</sup>)') /* 簡易的な累乗表示 */}</span>
+        `;
+        container.appendChild(row);
+    }
 
-        statusDiv.innerHTML = `Finished in ${timeTaken}s`;
-        
-        if (formula) {
-            resultDiv.innerHTML = `FOUND: <br><span style="color:#fff">${formula} = ${target}</span>`;
-        } else {
-            resultDiv.innerHTML = "NOT FOUND IN THIS SCOPE";
-        }
-    }, 50);
+    stats.innerText = `Current progress: ${currentNum} / 11111`;
+    currentNum++;
+
+    // 少し待機して次の数字へ（ブラウザが固まらないように＆羅列していく様子を見せるため）
+    setTimeout(generateNext, 10); 
 }
 </script>
 
