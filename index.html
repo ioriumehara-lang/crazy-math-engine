@@ -11,6 +11,7 @@
             --neon-desc: #00d4ff;
             --accent: #ffffff;
             --border: rgba(255, 255, 255, 0.1);
+            --text-dim: #8b949e;
         }
 
         body {
@@ -24,36 +25,63 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding: 20px;
         }
 
         .terminal-container {
-            width: 90%;
+            width: 95%;
             max-width: 900px;
             background: var(--panel);
             backdrop-filter: blur(10px);
             border: 1px solid var(--border);
             border-radius: 24px;
-            padding: 50px;
+            padding: 40px;
             box-shadow: 0 40px 100px rgba(0,0,0,0.8);
             position: relative;
+        }
+
+        /* サイト説明セクション */
+        .manual-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .manual-section p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.8;
+            max-width: 600px;
+            margin: 0 auto;
+            letter-spacing: 0.5px;
+        }
+
+        .manual-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: var(--accent);
+            font-size: 0.75rem;
+            margin-bottom: 15px;
         }
 
         h1 {
             text-align: center;
             font-weight: 200;
-            letter-spacing: 12px;
-            margin-bottom: 50px;
+            letter-spacing: 10px;
+            margin: 20px 0 40px 0;
             color: var(--accent);
             text-transform: uppercase;
             font-size: 1.5rem;
         }
 
-        /* 入力エリアのレイアウト修正 */
         .input-group {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 20px; /* 入力欄とボタンの間の距離 */
+            gap: 20px;
             margin-bottom: 60px;
         }
 
@@ -76,14 +104,13 @@
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
         }
 
-        /* ボタンの重なりを解消 */
         .solve-btn {
             background: none;
             border: 1px solid var(--neon-asc);
             color: var(--neon-asc);
             border-radius: 16px;
-            padding: 0 25px;
-            height: 60px; /* 入力欄の高さに合わせる */
+            padding: 0 35px;
+            height: 60px;
             cursor: pointer;
             font-size: 1rem;
             font-weight: bold;
@@ -145,6 +172,15 @@
 <body>
 
 <div class="terminal-container">
+    <div class="manual-section">
+        <div class="manual-tag">SYSTEM INFORMATION</div>
+        <p>
+            本システムは、1から9（昇順）および9から1（降順）の数字を連続して使用し、<br>
+            四則演算および累乗（^）を組み合わせて指定された数値を導き出す解析エンジンです。<br>
+            201186などの巨大数にも対応した高精度な再帰探索アルゴリズムを搭載しています。
+        </p>
+    </div>
+
     <h1>Sequential Core</h1>
     
     <div class="input-group">
