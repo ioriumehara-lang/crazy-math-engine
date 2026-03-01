@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-time Crazy Math Solver</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #1a1a1a; color: #00ff00; text-align: center; padding: 20px; }
+        .container { border: 1px solid #00ff00; display: inline-block; padding: 30px; margin-top: 50px; background: #000; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+        input { background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 10px; font-size: 20px; width: 100px; outline: none; }
+        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; font-size: 20px; cursor: pointer; margin-left: 10px; font-weight: bold; }
+        button:hover { background: #008800; }
+        #status { margin-top: 20px; color: #888; height: 20px; }
+        #result { margin-top: 40px; font-size: 28px; min-height: 50px; }
+        .loading { animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>MATH ENGINE v1.0</h1>
+    <p>Target Number (0-11111):</p>
+    <input type="number" id="targetNum" value="100">
+    <button onclick="startSolve()">SOLVE</button>
+    
+    <div id="status"></div>
+    <div id="result"></div>
+</div>
+
+<script>
+// --- 計算エンジン (JavaScript版) ---
+function solve(target) {
+    const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    
+    // 状態を管理するメモ（動的計画法）
+    let memo = new Map();
+
+    function getPossibleValues(arr) {
+        const key = arr.join(',');
+        if (memo.has(key)) return memo.get(key);
+
+        let res = new Map();
+
+        // 1. 数字の結合 (1,2,3 -> 123)
+        let combined = parseInt(arr.join(''));
+        res.set(combined, arr.join(''));
+
+        // 2. 分割して再帰的に計算
+        for (let i = 1; i < arr.length; i++) {
+            let leftPart = arr.slice(0, i);
+            let rightPart = arr.slice(i);
+
+            let lefts = getPossibleValues(leftPart);
+            let rights = getPossibleValues(rightPart);
+
+            for (let [lVal, lExpr] of lefts) {
+                for (let [rVal, rExpr] of rights) {
+                    // 四則演算
+                    res.set(lVal + rVal, `(${lExpr}+${rExpr})`);
+                    res.set(lVal - rVal, `(${lExpr}-${rExpr})`);
+                    res.set(lVal * rVal, `(${lExpr}*${rExpr})`);
+                    if (rVal !== 0 && lVal % rVal === 0) res.set(lVal / rVal, `(${lExpr}/${rExpr})`);
+                    
+                    // 累乗 (あまりに大きくなる計算はスキップして高速化)
+                    if (rVal > 1 && rVal < 7 && lVal < 20) {
+                        let pVal = Math.pow(lVal, rVal);
+                        if (pVal < 1000000) res.set(pVal, `(${lExpr}^${rExpr})`);
+                    }
+                }
+            }
+        }
+        memo.set(key, res);
+        return res;
+    }
+
+    const all = getPossibleValues(nums);
+    return all.get(target) || null;
+}
+
+// --- 画面制御 ---
+function startSolve() {
+    const target = parseInt(document.getElementById('targetNum').value);
+    const resultDiv = document.getElementById('result');
+    const statusDiv = document.getElementById('status');
+    
+    resultDiv.innerHTML = "";
+    statusDiv.innerHTML = "<span class='loading'>CALCULATING...</span>";
+
+    // ブラウザの描画を止めないように、少し遅延させて計算開始
+    setTimeout(() => {
+        const startTime = performance.now();
+        const formula = solve(target);
+        const endTime = performance.now();
+        const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+
+        statusDiv.innerHTML = `Finished in ${timeTaken}s`;
+        
+        if (formula) {
+            resultDiv.innerHTML = `FOUND: <br><span style="color:#fff">${formula} = ${target}</span>`;
+        } else {
+            resultDiv.innerHTML = "NOT FOUND IN THIS SCOPE";
+        }
+    }, 50);
+}
+</script>
+
+</body>
+</html>
