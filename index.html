@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Sequential Logic Terminal</title>
+    <title>Sequential Logic Engine Pro</title>
     <style>
         :root {
             --bg: #0a0b10;
@@ -15,7 +15,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg);
             color: var(--text-main);
             display: flex;
@@ -23,7 +23,6 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            overflow: hidden;
         }
 
         .container {
@@ -32,20 +31,8 @@
             background: var(--panel);
             border-radius: 16px;
             padding: 40px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             position: relative;
-        }
-
-        /* 装飾的な背景要素 */
-        .container::before {
-            content: "SEQ_LOGIC_v4.0";
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-family: monospace;
-            font-size: 10px;
-            color: var(--text-dim);
-            letter-spacing: 2px;
         }
 
         h1 {
@@ -53,12 +40,9 @@
             font-weight: 300;
             letter-spacing: 5px;
             margin-bottom: 40px;
-            font-size: 1.8rem;
             color: var(--accent);
-            text-transform: uppercase;
         }
 
-        /* 検索セクション */
         .search-section {
             display: flex;
             justify-content: center;
@@ -71,17 +55,11 @@
             border: 2px solid #30363d;
             border-radius: 12px;
             color: #fff;
-            padding: 15px 25px;
+            padding: 15px;
             font-size: 1.5rem;
-            width: 200px;
-            transition: all 0.3s ease;
+            width: 250px;
             text-align: center;
             outline: none;
-        }
-
-        input:focus {
-            border-color: var(--neon-asc);
-            box-shadow: 0 0 15px rgba(0, 255, 149, 0.2);
         }
 
         button {
@@ -93,19 +71,8 @@
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255,255,255,0.2);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        /* リザルトグリッド */
         .results-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -122,11 +89,6 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .res-card:hover {
-            border-color: #444;
         }
 
         .label {
@@ -134,22 +96,14 @@
             font-weight: bold;
             letter-spacing: 2px;
             margin-bottom: 15px;
-            text-transform: uppercase;
         }
 
         .formula {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-family: 'Consolas', monospace;
             color: var(--accent);
             text-align: center;
             word-break: break-all;
-            line-height: 1.5;
-        }
-
-        .no-sol {
-            color: #484f58;
-            font-size: 0.9rem;
-            font-style: italic;
         }
 
         #status-bar {
@@ -160,48 +114,39 @@
             text-align: center;
             font-size: 0.7rem;
             color: var(--text-dim);
-            letter-spacing: 1px;
         }
 
-        /* アニメーション */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
+        sup { color: #ffca28; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Sequential Logic</h1>
+    <h1>Sequential Logic Pro</h1>
     
     <div class="search-section">
-        <input type="number" id="target" placeholder="Enter Num" autofocus>
-        <button onclick="solveBoth()">SOLVE</button>
+        <input type="number" id="target" placeholder="Target Number" autofocus>
+        <button onclick="solve()">EXECUTE</button>
     </div>
 
     <div class="results-grid">
-        <div class="res-card" id="asc-card">
-            <div class="label" style="color: var(--neon-asc)">Ascending 1 &rarr; 9</div>
+        <div class="res-card">
+            <div class="label" style="color: var(--neon-asc)">ASCENDING 1 &rarr; 9</div>
             <div id="asc-out" class="formula">--</div>
         </div>
-        <div class="res-card" id="desc-card">
-            <div class="label" style="color: var(--neon-desc)">Descending 9 &rarr; 1</div>
+        <div class="res-card">
+            <div class="label" style="color: var(--neon-desc)">DESCENDING 9 &rarr; 1</div>
             <div id="desc-out" class="formula">--</div>
         </div>
     </div>
 
-    <div id="status-bar">SYSTEM READY // WAITING FOR INPUT</div>
+    <div id="status-bar">READY // HIGH PERFORMANCE MODE</div>
 </div>
 
 <script>
 const memo = new Map();
 
-function getMathPatterns(numbers) {
+function getDeepPatterns(numbers) {
     const key = numbers.join(',');
     if (memo.has(key)) return memo.get(key);
 
@@ -209,15 +154,24 @@ function getMathPatterns(numbers) {
     res.set(parseInt(numbers.join('')), numbers.join(''));
 
     for (let i = 1; i < numbers.length; i++) {
-        const lefts = getMathPatterns(numbers.slice(0, i));
-        const rights = getMathPatterns(numbers.slice(i));
+        const lefts = getDeepPatterns(numbers.slice(0, i));
+        const rights = getDeepPatterns(numbers.slice(i));
 
         for (let [lv, le] of lefts) {
             for (let [rv, re] of rights) {
-                res.set(lv + rv, `(${le}+${re})`);
-                res.set(lv - rv, `(${le}-${re})`);
-                res.set(lv * rv, `(${le}*${re})`);
-                if (rv !== 0 && lv % rv === 0) res.set(lv / rv, `(${le}/${re})`);
+                // 四則演算
+                update(res, lv + rv, `(${le}+${re})`);
+                update(res, lv - rv, `(${le}-${re})`);
+                update(res, lv * rv, `(${le}*${re})`);
+                if (rv !== 0 && lv % rv === 0) update(res, lv / rv, `(${le}/${re})`);
+
+                // 累乗ブースト（大きな数字を作るのに必須）
+                if (rv >= 2 && rv <= 10 && lv >= 2 && lv <= 100) {
+                    const pv = Math.pow(lv, rv);
+                    if (Number.isSafeInteger(pv) && pv < 10000000) {
+                        update(res, pv, `(${le}^${re})`);
+                    }
+                }
             }
         }
     }
@@ -225,50 +179,39 @@ function getMathPatterns(numbers) {
     return res;
 }
 
-function solveBoth() {
-    const val = parseInt(document.getElementById('target').value);
-    const statusBar = document.getElementById('status-bar');
-    const ascOut = document.getElementById('asc-out');
-    const descOut = document.getElementById('desc-out');
-    const cards = document.querySelectorAll('.res-card');
+function update(map, val, expr) {
+    if (!map.has(val) || expr.length < map.get(val).length) {
+        map.set(val, expr);
+    }
+}
 
+function solve() {
+    const val = parseInt(document.getElementById('target').value);
+    const status = document.getElementById('status-bar');
     if (isNaN(val)) return;
 
-    statusBar.innerText = "EXECUTING LOGIC GATES...";
+    status.innerText = "PROCESSING COMPLEX COMBINATIONS...";
     
-    // 計算を非同期にしてUIに一瞬反映させる
     setTimeout(() => {
-        const ascMap = getMathPatterns([1,2,3,4,5,6,7,8,9]);
-        const ascFormula = ascMap.get(val);
-        
-        const descMap = getMathPatterns([9,8,7,6,5,4,3,2,1]);
-        const descFormula = descMap.get(val);
+        const ascMap = getDeepPatterns([1,2,3,4,5,6,7,8,9]);
+        const descMap = getDeepPatterns([9,8,7,6,5,4,3,2,1]);
 
-        // 表示の更新とアニメーションのトリガー
-        ascOut.innerHTML = ascFormula ? clean(ascFormula) : '<span class="no-sol">NO_DATA</span>';
-        descOut.innerHTML = descFormula ? clean(descFormula) : '<span class="no-sol">NO_DATA</span>';
-        
-        cards.forEach(card => {
-            card.classList.remove('fade-in');
-            void card.offsetWidth; // reflow
-            card.classList.add('fade-in');
-        });
-
-        statusBar.innerText = "CALCULATION COMPLETE.";
+        document.getElementById('asc-out').innerHTML = format(ascMap.get(val));
+        document.getElementById('desc-out').innerHTML = format(descMap.get(val));
+        status.innerText = "COMPLETE.";
     }, 50);
 }
 
-function clean(str) {
-    if (str.startsWith('(') && str.endsWith(')')) {
-        return str.substring(1, str.length - 1);
-    }
-    return str;
+function format(str) {
+    if (!str) return '<span style="color:#444">NOT FOUND</span>';
+    let s = str;
+    if (s.startsWith('(') && s.endsWith(')')) s = s.substring(1, s.length - 1);
+    return s.replace(/\^(\d+)/g, '<sup>$1</sup>').replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
 }
 
 document.getElementById('target').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') solveBoth();
+    if (e.key === 'Enter') solve();
 });
 </script>
-
 </body>
 </html>
