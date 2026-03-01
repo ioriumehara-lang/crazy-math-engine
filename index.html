@@ -2,35 +2,34 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Sequential Engine (Factorial Enabled)</title>
+    <title>Deep Sequential Logic Engine</title>
     <style>
-        :root { --neon-green: #00ff41; --bg-black: #050505; --accent: #ffcc00; }
-        body { font-family: 'Consolas', monospace; background: var(--bg-black); color: var(--neon-green); display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { background: #111; border: 1px solid var(--neon-green); padding: 30px; width: 95%; max-width: 900px; box-shadow: 0 0 40px rgba(0,255,65,0.2); }
+        :root { --neon-green: #00ff41; --bg-black: #050505; --accent: #00d4ff; }
+        body { font-family: 'Consolas', 'Courier New', monospace; background: var(--bg-black); color: var(--neon-green); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: #111; border: 1px solid var(--neon-green); padding: 30px; width: 95%; max-width: 800px; box-shadow: 0 0 30px rgba(0,255,65,0.1); }
         .input-area { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
-        input { background: #000; border: 1px solid var(--neon-green); color: #fff; padding: 15px; font-size: 24px; width: 250px; outline: none; }
-        button { background: var(--neon-green); color: #000; border: none; padding: 15px 30px; font-size: 18px; cursor: pointer; font-weight: bold; }
+        input { background: #000; border: 1px solid var(--neon-green); color: #fff; padding: 10px; font-size: 24px; width: 150px; outline: none; }
+        button { background: var(--neon-green); color: #000; border: none; padding: 10px 25px; font-size: 18px; cursor: pointer; font-weight: bold; }
         button:hover { background: #fff; }
-        .results-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .panel { background: #000; border: 1px solid #333; padding: 20px; position: relative; border-radius: 4px; }
-        .panel h2 { font-size: 0.8rem; color: #888; margin: 0 0 15px 0; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 5px; }
-        .formula-display { font-size: 1.3rem; color: #fff; word-break: break-all; line-height: 1.6; }
-        #status { margin-top: 10px; color: var(--accent); font-size: 0.9rem; height: 20px; text-align: center; }
+        .results-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .panel { background: #000; border: 1px solid #222; padding: 15px; position: relative; }
+        .panel h2 { font-size: 0.7rem; color: #666; margin: 0 0 10px 0; letter-spacing: 2px; }
+        .formula-display { font-size: 1.1rem; color: #fff; word-break: break-all; min-height: 1.5em; line-height: 1.6; }
+        #loading { display: none; margin: 10px; color: var(--accent); font-size: 0.9rem; }
         sup { color: var(--accent); }
-        .fact { color: #ff00ff; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 style="text-align:center; font-size: 1.5rem;">ULTIMATE SEQUENTIAL ENGINE <span style="color:#ff00ff;">[!]</span></h1>
+    <h1 style="text-align:center; font-size: 1.2rem; border-bottom: 1px solid #222; padding-bottom: 15px;">DEEP SEARCH ENGINE v2.0</h1>
     
     <div class="input-area">
-        <input type="number" id="targetInput" value="2015719" placeholder="Target Number">
-        <button onclick="ultimateSolve()">ULTIMATE SEARCH</button>
+        <input type="number" id="targetInput" value="10000">
+        <button onclick="deepSolve()">DEEP SEARCH</button>
     </div>
 
-    <div id="status"></div>
+    <div id="loading">CORE ENGINE OPTIMIZING... SCANNING ALL POSSIBILITIES...</div>
 
     <div class="results-container">
         <div class="panel">
@@ -45,98 +44,94 @@
 </div>
 
 <script>
-const memo = new Map();
+// メモ化用。深い探索なので、セッション中ずっと保持する
+const globalMemo = new Map();
 
-// 階乗の計算
-function factorial(n) {
-    if (n < 0 || n > 12) return null; // 13!以上は巨大すぎてJavaScriptで誤差が出る
-    let res = 1;
-    for (let i = 2; i <= n; i++) res *= i;
-    return res;
-}
-
-function getUltimateValues(numbers) {
+function getDeepValues(numbers) {
     const key = numbers.join(',');
-    if (memo.has(key)) return memo.get(key);
+    if (globalMemo.has(key)) return globalMemo.get(key);
 
     const results = new Map();
 
-    // 1. 数字の結合と、その階乗
+    // 1. 数字の結合 (1,2,3 -> 123)
     const combined = parseInt(numbers.join(''));
     if (!isNaN(combined)) {
         results.set(combined, numbers.join(''));
-        // 1桁の場合のみ階乗を許可（3!など。123!は計算不能なため）
-        if (combined >= 3 && combined <= 9) {
-            const f = factorial(combined);
-            results.set(f, `${combined}!`);
-        }
     }
 
-    // 2. 分割探索
+    // 2. 木構造の全パターン分割 (再帰)
     for (let i = 1; i < numbers.length; i++) {
-        const leftMap = getUltimateValues(numbers.slice(0, i));
-        const rightMap = getUltimateValues(numbers.slice(i));
+        const leftPart = numbers.slice(0, i);
+        const rightPart = numbers.slice(i);
+
+        const leftMap = getDeepValues(leftPart);
+        const rightMap = getDeepValues(rightPart);
 
         for (const [lVal, lExpr] of leftMap) {
             for (const [rVal, rExpr] of rightMap) {
                 // 四則演算
-                addRes(results, lVal + rVal, `(${lExpr}+${rExpr})`);
-                addRes(results, lVal - rVal, `(${lExpr}-${rExpr})`);
-                addRes(results, lVal * rVal, `(${lExpr}*${rExpr})`);
+                updateMap(results, lVal + rVal, `(${lExpr}+${rExpr})`);
+                updateMap(results, lVal - rVal, `(${lExpr}-${rExpr})`);
+                updateMap(results, lVal * rVal, `(${lExpr}*${rExpr})`);
                 if (rVal !== 0 && Number.isInteger(lVal / rVal)) {
-                    addRes(results, lVal / rVal, `(${lExpr}/${rExpr})`);
+                    updateMap(results, lVal / rVal, `(${lExpr}/${rExpr})`);
                 }
 
-                // 累乗（2015719対応のため上限を拡張）
+                // 深い探索用の累乗制限 (底が小さければ指数を大きく、底が大きければ指数を小さく)
                 if (rVal >= 0 && rVal <= 10) {
-                    try {
-                        const pVal = Math.pow(lVal, rVal);
-                        if (Number.isSafeInteger(pVal) && pVal > 0 && pVal < 10000000) {
-                            addRes(results, pVal, `(${lExpr}^${rExpr})`);
-                        }
-                    } catch(e) {}
+                    if ((lVal > 0 && lVal <= 10) || (lVal > 10 && rVal <= 4)) {
+                        try {
+                            const pVal = Math.pow(lVal, rVal);
+                            if (Number.isSafeInteger(pVal) && pVal > 0) {
+                                updateMap(results, pVal, `(${lExpr}^${rExpr})`);
+                            }
+                        } catch(e) {}
+                    }
                 }
             }
         }
     }
-    memo.set(key, results);
+    globalMemo.set(key, results);
     return results;
 }
 
-function addRes(map, val, expr) {
+function updateMap(map, val, expr) {
+    // 短い数式を優先して保持する（可読性のため）
     if (!map.has(val) || expr.length < map.get(val).length) {
         map.set(val, expr);
     }
 }
 
-function ultimateSolve() {
+function deepSolve() {
     const target = parseInt(document.getElementById('targetInput').value);
-    const status = document.getElementById('status');
+    const loading = document.getElementById('loading');
     const ascDisp = document.getElementById('asc-res');
     const descDisp = document.getElementById('desc-res');
 
-    status.innerText = "RUNNING HEAVY CALCULATION WITH FACTORIALS...";
-    
+    if (isNaN(target)) return;
+    loading.style.display = "block";
+
+    // UI更新のために非同期実行
     setTimeout(() => {
-        // メモをクリア（階乗ありなしの混同を避けるため）
-        memo.clear();
-        
-        const ascMap = getUltimateValues([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        const descMap = getUltimateValues([9, 8, 7, 6, 5, 4, 3, 2, 1]);
+        const ascMap = getDeepValues([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        const descMap = getDeepValues([9, 8, 7, 6, 5, 4, 3, 2, 1]);
 
-        ascDisp.innerHTML = format(ascMap.get(target));
-        descDisp.innerHTML = format(descMap.get(target));
+        ascDisp.innerHTML = formatResult(ascMap.get(target));
+        descDisp.innerHTML = formatResult(descMap.get(target));
 
-        status.innerText = "CALCULATION COMPLETE.";
-    }, 100);
+        loading.style.display = "none";
+    }, 50);
 }
 
-function format(f) {
-    if (!f) return '<span style="color:#444">OUT OF REACH</span>';
+function formatResult(formula) {
+    if (!formula) return '<span style="color:#555">NOT REACHABLE</span>';
+    // 見栄えの調整
+    let f = formula;
     if (f.startsWith('(') && f.endsWith(')')) f = f.substring(1, f.length - 1);
-    return f.replace(/\^/g, '<sup>').replace(/\)/g, '</sup>)')
-            .replace(/(\d+!)/g, '<span class="fact">$1</span>');
+    return f.replace(/\^(\d+)/g, '<sup>$1</sup>')
+            .replace(/\^(\([^)]+\))/g, '<sup>$1</sup>');
 }
 </script>
+
 </body>
 </html>
